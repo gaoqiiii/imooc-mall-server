@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
-var User = require('../models/user')
+var User = require('../models/user');
+require('./../util/util')
 /* GET users listing. */
 router.get('/', function(req, res, next) {
   res.send('respond with a resource');
@@ -268,6 +269,7 @@ router.post('/delAddress', function(req, res, next){
   })
 })
 
+// 订单
 router.post('/payment', function(req, res, next){
   let userId = req.body.userId,
       orderTotal = req.body.orderTotal,
@@ -294,8 +296,15 @@ router.post('/payment', function(req, res, next){
           goodsList.push(item)
         }
       })
+      let platForm = '622'
+      let r1 = Math.floor(Math.random() * 10)
+      let r2 = Math.floor(Math.random() * 10)
+      let systemDate = new Date().Format('yyyyMMddhhmmss')
+      let createDate =  new Date().Format('yyyy-MM-dd hh:mm:ss')
+      let orderId = platForm + r1 + systemDate + r2
+
       let order = {
-        orderId: '',
+        orderId: orderId,
         orderTotal: orderTotal,
         addressInfo: address,
         goodsList: goodsList,
@@ -313,13 +322,85 @@ router.post('/payment', function(req, res, next){
         } else {
           res.json({
             status: '0',
-            msg: err.message,
+            msg: '',
             result: {
               orderId: order.orderId,
               orderTotal: order.orderTotal
             }
           })
         }
+      })
+    }
+  })
+})
+
+// 根据orderId查询order信息
+router.post('/orderDetail', function(req, res, next) {
+  let userId = req.body.userId,
+      orderId = req.body.orderId
+  User.findOne({userId: userId}, function(err, userInfo) {
+    if (err) {
+      res.json({
+        status: '1',
+        msg: err.message,
+        result: ''
+      })
+    } else {
+      let orderList = userInfo.orderList
+      if (orderList.length > 0 ) {
+        let orderTotal = 0
+        orderList.forEach(item => {
+          if (item.orderId == orderId) {
+            orderTotal = item.orderTotal
+          } 
+        })
+        if (orderTotal > 0) {
+          res.json({
+            status: '0',
+            msg: '',
+            result: {
+              orderId: orderId,
+              orderTotal: orderTotal
+            }
+          })
+        } else {
+          res.json({
+            status: '12002',
+            msg: '当前用户无订单',
+            result: ''
+          })
+        }
+      } else {
+        res.json({
+          status: '12001',
+          msg: '无此订单',
+          result: ''
+        })
+      }
+    }
+  })
+})
+
+// 查询购物车数量
+router.post('/getCartCount', function(req, res, next){
+  let userId =req.body.userId
+  User.findOne({userId: userId}, function(err, doc){
+    if (err){
+      res.json({
+        status: '1',
+        msg: err.message,
+        result: ''
+      })
+    } else {
+      let cartList = doc.cartList,
+          cartCount = 0
+      cartList.forEach(item => {
+        cartCount += parseInt(item.productNum)
+      })
+      res.json({
+        status: '0',
+        msg: 'success',
+        result: cartCount
       })
     }
   })
